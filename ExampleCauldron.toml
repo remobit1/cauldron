@@ -1,0 +1,37 @@
+# This is a TOML document that when filled, would statisfy the requirements of a Cauldron config file
+
+title = "Cauldron"
+
+imports = ["io/ioutil", "log"]
+
+[server]
+port = 8080
+
+[[page]]
+name = "login" 
+Homepage = true
+css = true
+javscript = true
+PublicPage = true
+description = "The login page for the website"
+
+[[page]]
+name = "Display Wiki pages" 
+css = true
+javscript = true 
+PublicPage = true
+description = "Display wiki pages"
+
+[[page]]
+name = "Edit wiki pages" 
+css = true
+javscript = true 
+PublicPage = true
+description = "edit wiki pages"
+
+[[page]]
+name = "Save wiki pages" 
+css = true
+javscript = true 
+PublicPage = false
+description = "Save wiki pages"
