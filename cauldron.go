@@ -37,17 +37,11 @@ type cauldronConfig struct {
 	Imports []string `toml:"imports"`
 }
 
-type cauldronPot strings.Builder
-
 var (
 	config cauldronConfig
 )
 
-func init() {
-	// initializing function to make sure the environment variables are set and such and such, the environment is capable of running the program
-}
-
-func (pot cauldronPot) appendHandlerSnippets(name string) {
+/*func (pot cauldronPot) appendHandlerSnippets(name string) {
 	b := strings.Builder{}
 	fmt.Fprintf(&b,
 		`func %[1]sHandler(response http.Responseappendr, request *http.Request, title string) {
@@ -57,62 +51,14 @@ func (pot cauldronPot) appendHandlerSnippets(name string) {
 `, name)
 	fmt.Print(b.String())
 }
-
-func (pot cauldronPot) appendTypeSnippets(name string) {
-	b := strings.Builder{}
-	fmt.Fprintf(&b,
-		`type %sPage struct {
-		Title string
-		}
-
-	`, name)
-}
-
-func (pot cauldronPot) appendMainSnippet(name string) {
-
-}
-
-func (pot cauldronPot) appendPackageAndImportSnippet(imports []string) {
-	b := strings.Builder{}
-	fmt.Fprint(&b,
-		`
-	package main
-
-	import (
-		"database/sql"
-		"fmt"
-		"html/template"
-		"io/ioutil"
-		"log"
-		"net/http"
-		"regexp"
-		"strings"
-	`)
-
-	for _, i := range imports {
-		fmt.Fprintf(&b,
-			`"%s"
-		`, i)
-
-		// change this to Fprintf later and have the parse files be generate by an array passed through channels from the appendHandler snippet. Ditto for MustCompile.
-		fmt.Fprint(&b,
-			`
-		)
-
-		var (
-			templates = template.Must(template.ParseFiles("welcome.html"))
-			validPath = regexp.MustCompile("^/(welcome|login|signUp|success)/$")
-		)
-
-	`)
-	}
-}
-
-func finalizeBoilerPlate(b boilerPlater) {
-
-}
-
+*/
 func main() {
+	cauldronDoc, err := ioutil.ReadFile("ExampleCauldron.toml")
+	doc := bytes.NewBuffer(cauldronDoc).String()
+	_, err = toml.Decode(doc, &config)
+	if err != nil {
+		log.Println(err)
+	}
 	/* make a directory to house the web app
 	err := os.Mkdir("Random name", 0777)
 
@@ -159,19 +105,26 @@ func main() {
 			}
 		}
 
-		func welcomeHandler(response http.Responseappendr, request *http.Request, title string) {
-			page := &Page{Title: title}
-			renderTemplate(response, "welcome", page)
+		func checkInternalServerError(err Error) {
+			if err != nil {
+				return http.Error(response, err.Error(), http.StatusInternalServerError)
+			}
+			return
 		}
 
-		func makeHandler(fn func(http.Responseappendr, *http.Request, string)) http.HandlerFunc {
+		func %sHandler(response http.Responseappendr, request *http.Request) {
+			err := templates.ExecuteTemplate(response, %s+".html", *%spage)
+			checkInternalServerError(err)
+		}
+
+		func makeHandler(fn func(http.Responseappendr, *http.Request)) http.HandlerFunc {
 			return func(response http.Responseappendr, request *http.Request) {
 				validatedPath := validPath.FindStringSubmatch(request.URL.Path)
 				if validatedPath == nil {
 					http.NotFound(response, request)
 					return
 				}
-				fn(response, request, validatedPath[1])
+				fn(response, request)
 			}
 		}
 
@@ -190,17 +143,114 @@ func main() {
 	if err != nil {
 		panic(err)
 	} */
+	b := strings.Builder{}
+	fmt.Fprint(&b,
+		`
+	package main
 
-	cauldronDoc, err := ioutil.ReadFile("ExampleCauldron.toml")
-	doc := bytes.NewBuffer(cauldronDoc).String()
-	_, err = toml.Decode(doc, &config)
-	if err != nil {
-		log.Println(err)
+	import (
+		"database/sql"
+		"fmt"
+		"html/template"
+		"io/ioutil"
+		"log"
+		"net/http"
+		"regexp"
+		"strings"
+	`)
+
+	for _, i := range config.Imports {
+		fmt.Fprintf(&b,
+			`"%s"
+		`, i)
 	}
 
-	pot := cauldronPot{}
+	fmt.Fprint(&b,
+		`
+	)
+
+	var (
+		templates = template.Must(template.ParseFiles(`)
+
+	// anonymous function to return a slice of strings to pass to template.ParseFiles
+	parseFiles := func() []string {
+		var files []string
+		for _, i := range config.Pages {
+			files = append(files, i.Name)
+		}
+		return files
+	}
+	validPath := strings.Join(parseFiles(), "|")
+
+	fmt.Fprintf(&b,
+		`%s...))
+		validPath = regexp.MustCompile("^/(%s)/$")
+			)
+
+		`, parseFiles(), validPath)
+
 	for _, i := range config.Pages {
-		pot.appendHandlerSnippets(i.Name)
+		fmt.Fprintf(&b,
+			`
+			//%s
+			type %sPage struct {
+			Title string
+			}
+	
+		`, i.Description, i.Name)
 	}
+
+	fmt.Fprint(&b,
+		`	func checkInternalServerError(err Error) {
+	if err != nil {
+		return http.Error(response, err.Error(), http.StatusInternalServerError)				
+	}
+	return
+}
+
+`)
+
+	fmt.Fprint(&b,
+		`		func makeHandler(fn func(http.Responseappendr, *http.Request)) http.HandlerFunc {
+		return func(response http.Responseappendr, request *http.Request) {
+			validatedPath := validPath.FindStringSubmatch(request.URL.Path)
+			if validatedPath == nil {
+				http.NotFound(response, request)
+				return
+			}
+			fn(response, request)
+		}
+	}`)
+
+	for _, i := range config.Pages {
+		fmt.Fprintf(&b,
+			`func %[1]sHandler(response http.Responseappendr, request *http.Request) {
+			err := templates.ExecuteTemplate(response, %[1]s+".html", *%[1]spage)
+			checkInternalServerError(err)
+		}
+
+		`, i.Name)
+	}
+
+	for _, i := range config.Pages {
+		if i.Homepage != false {
+			fmt.Fprintf(&b,
+				`func main() {
+				http.HandleFunc("/", %[1]sHandler)
+				http.HandleFunc("/%[1]s/", makeHandler(%[1]sHandler))
+				`, i.Name)
+		}
+	}
+
+	for _, i := range config.Pages {
+		fmt.Fprintf(&b,
+			`
+		http.HandleFunc("/%[1]s/", %[1]sHandler)
+		`, i.Name)
+	}
+
+	fmt.Fprint(&b, `
+	}`)
+	fmt.Print(b.String())
 
 }
