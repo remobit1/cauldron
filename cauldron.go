@@ -249,8 +249,9 @@ func main() {
 		`, i.Name)
 	}
 
-	fmt.Fprint(&b, `
-	}`)
+	fmt.Fprintf(&b, `
+	log.Fatal(http.ListenAndServe(":%v", nil))
+	}`, config.Server.Port)
 	fmt.Print(b.String())
 
 }
